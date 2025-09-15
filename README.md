@@ -1,60 +1,84 @@
-Common data models for creating [type-2 slowly changing dimensions tables](https://en.wikipedia.org/wiki/Slowly_changing_dimension) from mutable data sources in [Dataform](https://github.com/dataform-co/dataform).
+# SCD Builder for Dataform
 
-## Supported warehouses
+This package provides a reusable JavaScript helper for building **Type-2 Slowly Changing Dimension (SCD)** tables and views in [Dataform](https://dataform.co).  
+It automates the creation of an incremental *historical table* and a user-friendly *SCD view*.
 
-- BigQuery
-- Redshift/PG
-- Snowflake
+---
 
-_If you would like us to add support for another warehouse, please get in touch via [email](mailto:team@dataform.co) or [Slack](https://slack.dataform.co/)_
+## Overview
+
+When you call the builder, it generates:
+
+1.  ```<name>_historical` (**incremental table**)  
+    - Stores all historical versions of each row.  
+    - Includes SCD metadata columns:  
+      - `scd_id`: hash of primary key(s)  
+      - `scd_valid_from`: timestamp when the record became valid  
+      - `scd_valid_to`: timestamp when the record expired (NULL if current)  
+      - `scd_active`: 1 if current, 0 if historical  
+    ```
+
+2. ```<name>_scd` (**view**)  
+   - Wraps the historical table for convenient querying.  
+   - Computes `scd_valid_to` dynamically.  
+   - Supports both **timestamp** and **check** change detection strategies.
+   ```
+
+---
 
 ## Installation
 
-Add the package to your `package.json` file in your Dataform project. You can find the most up to package version on the [releases page](https://github.com/dataform-co/dataform-scd/releases).
+Place the following into __package.json__
 
-## Configure the package
-
-Create a new JS file in your `definitions/` folder create an SCD table with the following example:
-
-```js
-const scd = require("dataform-scd");
-
-scd("source_data_scd", {
-  // A unique identifier for rows in the table.
-  uniqueKey: "user_id",
-  // A field that stores a timestamp or date of when the row was last changed.
-  timestamp: "updated_at",
-    // A field that stores the hash value of the fields that we want to track changes in. If you do not want to use the hash comparison, you may omit this field or set it to null
-    hash: "hash_value", // OPTIONAL
-    // The source table to build slowly changing dimensions from.
-    source: {
-      schema: "dataform_scd_example",
-      name: "source_data",
-  },
-  // Any configuration parameters to apply to the incremental table that will be created.
-  incrementalConfig: {
-    bigquery: {
-      partitionBy: "updated_at",
-    },
-  },
-});
+```
+{
+    "name": "your-repository",
+    "dependencies": {
+        "@dataform/core": "3.0.26",
+        "scd-builder": "https://github.com/tuliodalcol/dataform-scd2"
+    }
+}
 ```
 
-For more advanced customization of outputs, see the [example.js](https://github.com/dataform-co/dataform-scd/blob/master/definitions/example.js).
+## Example
 
-### Scheduling
+```
+    const scdBuilder = require("scd-builder");
 
-Slowly changing dimensions can only by updated as quickly as these models are run. These models should typically be scheduled to run every day or every hour, depending on the granularity of changes you want to capture.
+    //Check strategy comparing specific columns
+    scdBuilder("src_check", {
+        strategy: "check",
+        uniqueKey: ["user_id", "client_id"],
+        checkCols: ["value"],
+        source: { 
+        schema: dataform.projectConfig.defaultDataset, 
+        name: "src_strategy_check" 
+        },
+        tags: ['scd', 'full'],
+        dependencies: ['update_src_check'],
+        schema: dataform.projectConfig.defaultDataset, 
+        description: "Updates table for SCD with Check columns strategy",
+    });
+```
 
-### Hash comparison option
+```
+    const scdBuilder = require("scd-builder");
 
-Depending on your data update method, you may want to use the hash field option to compare rows on each execution and only add the ones that have been changed or added. To do this, please make sure your table contains a hash field created using the hash function of your choice. You can find a list of the hash functions available in BigQuery [here](https://cloud.google.com/bigquery/docs/reference/standard-sql/hash_functions). On each incremental run, the query will compare the hashes for each unique identifier to the ones in the updated table. It will only keep the rows where the hash has changed or where the row ID is not found in the current data.
+    //Timestamp strategy comparing keys related to timestamp column
+    scdBuilder("src_timestamp", {
+        strategy: "timestamp",
+        uniqueKey: ["user_id", "client_id"],
+        timestampCol: 'updated_at',
+        source: { 
+            schema: dataform.projectConfig.defaultDataset, 
+            name: "src_strategy_timestamp" 
+        },
+        tags: ['scd', 'full'],
+        dependencies: ['update_src_timestamp'],
+        schema: dataform.projectConfig.defaultDataset, 
+        description: "Updates table for SCD with Timestamp strategy",
+    });
+```
 
-If you do not want to use the hash comparison, simply omit the hash parameter from the config file or set it to `null`. If you do this, all rows with an updated timestamp will be added to the `{name}_updates` table, even if the data did not otherwise change.
 
-## Data models
 
-This package will create two relations in the warehouse, for a given `name` these will be:
-
-- `{name}` - a view with `scd_valid_from` and `scd_valid_to` fields
-- `{name}_updates` - an incremental table that stores the change history of the source table
