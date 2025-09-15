@@ -1,0 +1,6 @@
+defaultLocation: US
+defaultProject: carby-analytics
+defaultDataset: dataform_scd
+defaultAssertionDataset: dataform_scd
+dataformCoreVersion: 3.0.26
+

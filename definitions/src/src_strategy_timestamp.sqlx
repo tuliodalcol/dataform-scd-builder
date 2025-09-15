@@ -1,0 +1,25 @@
+config {
+  type: "table",
+  tags: ['src', 'full']
+}
+
+
+
+WITH example_dataset AS (
+  SELECT
+      user_id,
+      client_id,
+      value,
+      updated_at
+    FROM UNNEST([
+        STRUCT(1 AS user_id, 11 AS client_id, 12.3 AS value, CURRENT_TIMESTAMP() AS updated_at),
+        STRUCT(2 AS user_id, 12 AS client_id, 23.4 AS value, TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 MINUTE) AS updated_at),
+        STRUCT(3 AS user_id, 13 AS client_id, 34.5 AS value, TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR) AS updated_at),
+        STRUCT(4 AS user_id, 14 AS client_id, 45.6 AS value, TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY) AS updated_at),
+        STRUCT(5 AS user_id, 15 AS client_id, 56.7 AS value, TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY) AS updated_at)
+    ])
+)
+
+SELECT *
+FROM example_dataset
+

@@ -1,0 +1,10 @@
+config {
+    type: 'operations',
+    tags: ['update_src', 'full']
+}
+
+-- Simulate updates
+UPDATE ${ref('src_strategy_check')}
+SET 
+    value = value + 1234
+WHERE user_id = 2;

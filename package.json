@@ -1,6 +1,0 @@
-{
-    "name": "dataform-scd",
-    "dependencies": {
-        "@dataform/core": "2.8.2"
-    }
-}

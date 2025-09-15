@@ -1,0 +1,12 @@
+config {
+    type: 'operations',
+    tags: ['update_src', 'full']
+}
+
+-- Simulate updates
+INSERT INTO ${ref('src_strategy_timestamp')} (user_id, client_id, value, updated_at)
+SELECT
+    5,
+    15,
+    433333 AS value,
+    TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)
