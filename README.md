@@ -13,24 +13,26 @@ It automates the creation of an incremental *historical table* and a user-friend
 
 When you call the builder, it generates:
 
-__###1.__  
-```bash
-    <name>_historical` (**incremental table**)  
+__1.__  
+```yaml
+(**incremental table**)  
+
+    <name>_historical` 
     - Stores all historical versions of each row.  
     - Includes SCD metadata columns:  
-      - `scd_id`: hash of primary key(s)  
-      - `scd_valid_from`: timestamp when the record became valid  
-      - `scd_valid_to`: timestamp when the record expired (NULL if current)  
-      - `scd_active`: 1 if current, 0 if historical  
+      - scd_id: hash of primary key(s)  
+      - scd_valid_from: timestamp when the record became valid  
+      - scd_valid_to: timestamp when the record expired (NULL if current)  
 ```
 
-__###2.__ 
-```bash
-    <name>_scd` (**view**)  
+__2.__ 
+```yaml
+(**view**)  
+    <name>_scd` 
    - Wraps the historical table for convenient querying.  
    - Computes `scd_valid_to` dynamically.  
    - Supports both **timestamp** and **check** change detection strategies.
-   ```
+```
 
 ---
 
@@ -38,7 +40,7 @@ __###2.__
 
 Place the following into __package.json__
 
-```
+```json
 {
     "name": "your-repository",
     "dependencies": {
@@ -51,7 +53,7 @@ Place the following into __package.json__
 ## Example
 
 Build Slowly-Changin-Dimension with strategy based on Primary or Composite Keys
-```
+```js
     const scdBuilder = require("scd-builder");
 
     //Check strategy comparing specific columns
@@ -60,8 +62,8 @@ Build Slowly-Changin-Dimension with strategy based on Primary or Composite Keys
         uniqueKey: ["user_id", "client_id"],
         checkCols: ["value"],
         source: { 
-        schema: dataform.projectConfig.defaultDataset, 
-        name: "src_strategy_check" 
+            schema: dataform.projectConfig.defaultDataset, 
+            name: "src_strategy_check" 
         },
         tags: ['scd', 'full'],
         dependencies: ['update_src_check'],
@@ -71,7 +73,7 @@ Build Slowly-Changin-Dimension with strategy based on Primary or Composite Keys
 ```
 
 Build Slowly-Changin-Dimension with strategy based on Timestamp Column
-```
+```js
     const scdBuilder = require("scd-builder");
 
     //Timestamp strategy comparing keys related to timestamp column
