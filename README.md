@@ -1,5 +1,9 @@
 # SCD Builder for Dataform
 
+
+Dataform Core is an open source meta-language to create SQL tables and workflows in BigQuery. 
+It is the best alternative to DBT.
+
 This package provides a reusable JavaScript helper for building **Type-2 Slowly Changing Dimension (SCD)** tables and views in [Dataform](https://dataform.co).  
 It automates the creation of an incremental *historical table* and a user-friendly *SCD view*.
 
@@ -9,16 +13,20 @@ It automates the creation of an incremental *historical table* and a user-friend
 
 When you call the builder, it generates:
 
-1.  ```<name>_historical` (**incremental table**)  
+__###1.__  
+```bash
+    <name>_historical` (**incremental table**)  
     - Stores all historical versions of each row.  
     - Includes SCD metadata columns:  
       - `scd_id`: hash of primary key(s)  
       - `scd_valid_from`: timestamp when the record became valid  
       - `scd_valid_to`: timestamp when the record expired (NULL if current)  
       - `scd_active`: 1 if current, 0 if historical  
-    ```
+```
 
-2. ```<name>_scd` (**view**)  
+__###2.__ 
+```bash
+    <name>_scd` (**view**)  
    - Wraps the historical table for convenient querying.  
    - Computes `scd_valid_to` dynamically.  
    - Supports both **timestamp** and **check** change detection strategies.
@@ -42,6 +50,7 @@ Place the following into __package.json__
 
 ## Example
 
+Build Slowly-Changin-Dimension with strategy based on Primary or Composite Keys
 ```
     const scdBuilder = require("scd-builder");
 
@@ -61,6 +70,7 @@ Place the following into __package.json__
     });
 ```
 
+Build Slowly-Changin-Dimension with strategy based on Timestamp Column
 ```
     const scdBuilder = require("scd-builder");
 
