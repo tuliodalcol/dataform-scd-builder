@@ -1,0 +1,6 @@
+{
+    "name": "scd-builder",
+    "dependencies": {
+        "@dataform/core": "3.0.26"
+    }
+}
