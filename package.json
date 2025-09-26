@@ -1,6 +1,8 @@
 {
-    "name": "scd-builder",
-    "dependencies": {
-        "@dataform/core": "3.0.26"
-    }
+  "name": "scd-builder",
+  "version": "1.0.0",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ]
 }
