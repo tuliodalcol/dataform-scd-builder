@@ -55,7 +55,7 @@
  *
  * @example
  * // Build an SCD using timestamp strategy
- * const { histData, scdView } = require("scd_builder")("user_snapshot", {
+ * const { histData, scdView } = require("df-scd_builder")("user_snapshot", {
  *   strategy: "timestamp",
  *   uniqueKey: "user_id",
  *   timestampCol: "updated_at",
@@ -68,7 +68,7 @@
  *
  * @example
  * // Build an SCD using check strategy with composite key
- * const { histData, scdView } = require("scd_builder")("client_orders", {
+ * const { histData, scdView } = require("df-scd_builder")("client_orders", {
  *   strategy: "check",
  *   uniqueKey: ["client_id", "order_id"],
  *   checkCols: ["status", "amount"],
@@ -119,69 +119,69 @@ module.exports = (
 
   // Incremental query generator
   const incrQry = (ctx) => `
-SELECT 
-  s.*,
-  ${scdIdExpr},
-  CURRENT_TIMESTAMP() AS scd_valid_from,
-  CAST(NULL AS TIMESTAMP) AS scd_valid_to
-FROM ${ctx.ref(source)} s
-LEFT JOIN ${ctx.self()} t
-  ON ${isCompositeKey
-    ? uniqueKey.map(k => `s.${k} = t.${k}`).join(" AND ")
-    : `s.${uniqueKey} = t.${uniqueKey}`}
-WHERE t.${isCompositeKey ? uniqueKey[0] : uniqueKey} IS NULL
-  OR (${compareExpr("s", "t")})
-  `;
-
-const fullRefreshQry = (ctx) => {
-  if (strategy === "timestamp") {
-    // Timestamp strategy: use timestampCol as scd_valid_from
-    return `
-SELECT
-  s.*,
-  ${scdIdExpr},
-  s.${timestampCol} AS scd_valid_from,
-  CAST(NULL AS TIMESTAMP) AS scd_valid_to
-FROM ${ctx.ref(source)} s
+  SELECT 
+    s.*,
+    ${scdIdExpr},
+    CURRENT_TIMESTAMP() AS scd_valid_from,
+    CAST(NULL AS TIMESTAMP) AS scd_valid_to
+  FROM ${ctx.ref(source)} s
+  LEFT JOIN ${ctx.self()} t
+    ON ${isCompositeKey
+      ? uniqueKey.map(k => `s.${k} = t.${k}`).join(" AND ")
+      : `s.${uniqueKey} = t.${uniqueKey}`}
+  WHERE t.${isCompositeKey ? uniqueKey[0] : uniqueKey} IS NULL
+    OR (${compareExpr("s", "t")})
     `;
-  } else if (strategy === "check") {
-    return `
-SELECT
-  s.*,
-  ${scdIdExpr},
-  CURRENT_TIMESTAMP() AS scd_valid_from,
-  CAST(NULL AS TIMESTAMP) AS scd_valid_to
-FROM ${ctx.ref(source)} s
-    `;
-  }
-};
+
+  const fullRefreshQry = (ctx) => {
+    if (strategy === "timestamp") {
+      // Timestamp strategy: use timestampCol as scd_valid_from
+      return `
+  SELECT
+    s.*,
+    ${scdIdExpr},
+    s.${timestampCol} AS scd_valid_from,
+    CAST(NULL AS TIMESTAMP) AS scd_valid_to
+  FROM ${ctx.ref(source)} s
+      `;
+    } else if (strategy === "check") {
+      return `
+  SELECT
+    s.*,
+    ${scdIdExpr},
+    CURRENT_TIMESTAMP() AS scd_valid_from,
+    CAST(NULL AS TIMESTAMP) AS scd_valid_to
+  FROM ${ctx.ref(source)} s
+      `;
+    }
+  };
 
 
-const view = (ctx) => {
-  if (strategy === "timestamp") {
-    // Timestamp strategy: simple LEAD over timestampCol
-    return `
-SELECT
-  * EXCEPT( scd_valid_from, scd_valid_to ),
-  ${timestampCol} AS scd_valid_from,
-  LEAD(${timestampCol}) OVER (PARTITION BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey} ORDER BY ${timestampCol} ASC) AS scd_valid_to
-FROM ${ctx.ref(histData.proto.target.schema, `${name}_historical`)}
-    `;
-  } 
-  
-  else if (strategy === "check") {
-    // Check strategy: detect changes based on checkCols
-    const changeColsHash = `TO_HEX(MD5(CONCAT(${checkCols.map(c => `CAST(${c} AS STRING)`).join(", ")})))`;
+  const view = (ctx) => {
+    if (strategy === "timestamp") {
+      // Timestamp strategy: simple LEAD over timestampCol
+      return `
+  SELECT
+    * EXCEPT( scd_valid_from, scd_valid_to ),
+    ${timestampCol} AS scd_valid_from,
+    LEAD(${timestampCol}) OVER (PARTITION BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey} ORDER BY ${timestampCol} ASC) AS scd_valid_to
+  FROM ${ctx.ref(histData.proto.target.schema, `${name}_historical`)}
+      `;
+    } 
+    
+    else if (strategy === "check") {
+      // Check strategy: detect changes based on checkCols
+      const changeColsHash = `TO_HEX(MD5(CONCAT(${checkCols.map(c => `CAST(${c} AS STRING)`).join(", ")})))`;
 
-    return `
-SELECT
-  * EXCEPT( scd_valid_to ),
-  LEAD(scd_valid_from) OVER (PARTITION BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey} ORDER BY scd_valid_from ASC) AS scd_valid_to
-FROM ${ctx.ref(histData.proto.target.schema, `${name}_historical`)} t
-ORDER BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey}, scd_valid_from
-    `;
-  }
-};
+      return `
+  SELECT
+    * EXCEPT( scd_valid_to ),
+    LEAD(scd_valid_from) OVER (PARTITION BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey} ORDER BY scd_valid_from ASC) AS scd_valid_to
+  FROM ${ctx.ref(histData.proto.target.schema, `${name}_historical`)} t
+  ORDER BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey}, scd_valid_from
+      `;
+    }
+  };
 
 
  const histData = publish(`${name}_historical`, {
@@ -203,6 +203,7 @@ ORDER BY ${isCompositeKey ? uniqueKey.join(", ") : uniqueKey}, scd_valid_from
     ${ctx.when(ctx.incremental(), incrQry(ctx))}
     ${ctx.when(!ctx.incremental(), fullRefreshQry(ctx))}
   `);
+
 
  const scdView = publish(`${name}_scd`, {
     type: "view",

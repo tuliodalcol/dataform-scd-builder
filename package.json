@@ -1,5 +1,5 @@
 {
-  "name": "scd-builder",
+  "name": "df-scd-builder",
   "version": "1.0.0",
   "main": "index.js",
   "files": [
