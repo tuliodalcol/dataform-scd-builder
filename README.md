@@ -45,7 +45,7 @@ Place the following into __package.json__
     "name": "your-repository",
     "dependencies": {
         "@dataform/core": "3.0.26",
-        "scd-builder": "https://github.com/tuliodalcol/dataform-scd2"
+        "scd-builder": "https://github.com/tuliodalcol/scd-builder/archive/refs/tags/v1.0.0.tar.gz"
     }
 }
 ```
